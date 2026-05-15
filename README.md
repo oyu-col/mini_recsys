@@ -44,6 +44,10 @@ PYTHONPATH=. python kaggle_otto2/feature/main.py --exp exp001_dev
 PYTHONPATH=. python kaggle_otto2/ranker_trainer/main.py --exp exp001_dev --model_type lgbm
 ```
 
+You can also upload and run `otto_mini.ipynb` on Kaggle. It clones this
+repository, detects the mounted CV dataset, and runs the same `exp001_dev`
+pipeline.
+
 For a first smoke test, reduce MF epochs in `yaml/exp001_dev.yaml`.
 
 ## Upstream
