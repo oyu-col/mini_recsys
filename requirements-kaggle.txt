@@ -1,14 +1,9 @@
-numpy
-pandas
-scipy<1.13
-scikit-learn
-torch
 polars
 pyarrow
 fastparquet
 lightgbm
 faiss-cpu
-gensim>=4.3.2
+gensim>=4.4.0
 hydra-core
 omegaconf
 click

@@ -18,6 +18,7 @@ The code is adapted for Kaggle Notebook execution:
 - keeps compatibility with newer Polars APIs
 - uses CUDA when available and falls back to CPU
 - treats CatBoost/XGBoost as optional dependencies
+- keeps Kaggle's preinstalled NumPy/Pandas/SciPy/Torch stack intact
 
 ## Kaggle 5% CV Run
 
