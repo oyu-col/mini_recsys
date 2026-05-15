@@ -3,6 +3,10 @@ seed: 77
 pp:
   sampling_ratio: 0.05
 cg:
+  cand_topk: 100
+  item_cf:
+    max_session_events: 30
+    pair_topk: 100
   item_mf:
     n_epochs: 15
     n_factors: 256

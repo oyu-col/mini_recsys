@@ -26,7 +26,7 @@ class CandGeneratorBase:
         self.data_dir = self.root_dir / "cand_generator" / self.cg_name
         self.data_dir.mkdir(exist_ok=True, parents=True)
 
-        self.cand_topk = 300
+        self.cand_topk = int(self.config.yaml.cg.get("cand_topk", 300))
         self.gen_cand_topk = 20
 
         self.dtype = dtype

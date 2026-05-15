@@ -60,6 +60,9 @@ class ItemCFCandGenerator(CandGeneratorBase):
         )
         self.gen_cand_topk = 40
         self.inference_split_num = 3
+        item_cf_cfg = config.yaml.cg.get("item_cf", {})
+        self.max_session_events = int(item_cf_cfg.get("max_session_events", 0) or 0)
+        self.item_pair_topk = int(item_cf_cfg.get("pair_topk", self.cand_topk))
         self.pair_df_dir = self.root_dir / "cand_generator" / self.short_cg_name
         self.pair_df_dir.mkdir(parents=True, exist_ok=True)
 
@@ -74,6 +77,18 @@ class ItemCFCandGenerator(CandGeneratorBase):
             with TimeUtil.timer("drop duplicates"):
                 train_df = train_df.sort(["session", "ts"], reverse=True)
                 train_df = train_df.unique(subset=["session", "aid", "type"])
+                gc.collect()
+
+            if self.max_session_events > 0:
+                with TimeUtil.timer(
+                    f"limit session events <= {self.max_session_events}"
+                ):
+                    train_df = train_df.groupby("session").head(
+                        self.max_session_events
+                    )
+                    gc.collect()
+
+            with TimeUtil.timer("calc aid counts"):
                 aid_counts = train_df["aid"].value_counts()
                 gc.collect()
 
@@ -202,9 +217,9 @@ class ItemCFCandGenerator(CandGeneratorBase):
             with TimeUtil.timer("sort"):
                 pair_df = pair_df.sort(["aid", "weight"], reverse=True)
 
-            with TimeUtil.timer("drop rows >= 300"):
+            with TimeUtil.timer(f"drop rows >= {self.item_pair_topk}"):
                 print("before drop rows:", pair_df.shape)
-                pair_df = pair_df.groupby("aid").head(300)
+                pair_df = pair_df.groupby("aid").head(self.item_pair_topk)
                 print("after drop rows:", pair_df.shape)
 
             with TimeUtil.timer("save pair_df"):
