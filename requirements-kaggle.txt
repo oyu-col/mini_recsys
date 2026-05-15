@@ -1,0 +1,25 @@
+numpy
+pandas
+scipy<1.13
+scikit-learn
+torch
+polars
+pyarrow
+fastparquet
+lightgbm
+faiss-cpu
+gensim>=4.3.2
+hydra-core
+omegaconf
+click
+tqdm
+psutil
+loguru
+matplotlib
+seaborn
+plotly
+multiprocess
+
+# Optional: only needed if you choose these model_type values.
+# catboost
+# xgboost
