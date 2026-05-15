@@ -9,11 +9,11 @@ class UserMFDataset(Dataset):
         train_df = train_df.with_columns(
             [
                 pl.col("session")
-                .apply(lambda x: session2idx[x])
+                .apply(lambda x: session2idx[x], return_dtype=pl.Int32)
                 .alias("session_idx")
                 .cast(pl.Int32),
                 pl.col("aid")
-                .apply(lambda x: aid2idx[x])
+                .apply(lambda x: aid2idx[x], return_dtype=pl.Int32)
                 .alias("aid_idx")
                 .cast(pl.Int32),
             ]

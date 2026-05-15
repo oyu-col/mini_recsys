@@ -83,7 +83,7 @@ class Item2VecTrainer:
                         .sort(["session", "ts"], reverse=[False, True])
                         .with_columns(
                             pl.col("aid")
-                            .apply(lambda x: aid2idx[x])
+                            .apply(lambda x: aid2idx[x], return_dtype=pl.Int32)
                             .cast(pl.Int32)
                             .alias("aid_idx")
                         )
@@ -129,7 +129,7 @@ class Item2VecTrainer:
                     .head(1)  # Get last item in test session
                     .with_columns(
                         pl.col("aid")
-                        .apply(lambda x: aid2idx[x])
+                        .apply(lambda x: aid2idx[x], return_dtype=pl.Int32)
                         .cast(pl.Int32)
                         .alias("aid_idx")
                     )

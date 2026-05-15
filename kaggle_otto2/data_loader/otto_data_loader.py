@@ -43,7 +43,6 @@ class OttoDataLoader:
 
                 test_labels = pl.DataFrame()
                 if self.config.is_cv:
-                    type_map = {"clicks": 0, "carts": 1, "orders": 2}
                     test_labels = (
                         pl.read_parquet(input_dir / "test_labels.parquet")
                         .with_columns(
@@ -53,7 +52,15 @@ class OttoDataLoader:
                             ]
                         )
                         .with_columns(
-                            pl.col("type").apply(lambda x: type_map[x]).cast(pl.UInt8)
+                            pl.when(pl.col("type") == "clicks")
+                            .then(0)
+                            .when(pl.col("type") == "carts")
+                            .then(1)
+                            .when(pl.col("type") == "orders")
+                            .then(2)
+                            .otherwise(None)
+                            .cast(pl.UInt8)
+                            .alias("type")
                         )
                     )
 

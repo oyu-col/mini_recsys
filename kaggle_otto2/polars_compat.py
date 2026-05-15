@@ -72,9 +72,38 @@ def patch_polars() -> None:
         ):
             setattr(cls, "sort", _wrap_sort(sort_method))
 
-    if not hasattr(pl.Expr, "apply") and hasattr(pl.Expr, "map_elements"):
+    expr_apply_method = getattr(pl.Expr, "apply", None)
+    if expr_apply_method is not None and not getattr(
+        expr_apply_method, "_otto_compat_patched", False
+    ):
+
+        @wraps(expr_apply_method)
+        def apply(self, function, return_dtype=None, skip_nulls=True, **kwargs):
+            if return_dtype is None:
+                return_dtype = pl.Int64
+            if hasattr(self, "map_elements"):
+                return self.map_elements(
+                    function,
+                    return_dtype=return_dtype,
+                    skip_nulls=skip_nulls,
+                    **kwargs,
+                )
+            return expr_apply_method(
+                self,
+                function,
+                return_dtype=return_dtype,
+                skip_nulls=skip_nulls,
+                **kwargs,
+            )
+
+        apply._otto_compat_patched = True
+        setattr(pl.Expr, "apply", apply)
+
+    elif hasattr(pl.Expr, "map_elements"):
 
         def apply(self, function, return_dtype=None, skip_nulls=True, **kwargs):
+            if return_dtype is None:
+                return_dtype = pl.Int64
             return self.map_elements(
                 function,
                 return_dtype=return_dtype,
@@ -82,6 +111,7 @@ def patch_polars() -> None:
                 **kwargs,
             )
 
+        apply._otto_compat_patched = True
         setattr(pl.Expr, "apply", apply)
 
     rank_method = getattr(pl.Expr, "rank", None)
