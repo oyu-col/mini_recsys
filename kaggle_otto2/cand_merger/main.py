@@ -1,4 +1,5 @@
 import click
+import os
 
 from kaggle_otto2.cand_generator import (
     Item2VecCandGenerator,
@@ -54,7 +55,10 @@ def main(exp: str):
     ]
     cand_merger = CandMerger(config.dir_config.exp_output_dir, config, data_loader)
     cand_merger.merge(cand_generators)
-    cand_merger.calc_score()
+    if os.environ.get("OTTO_CALC_CAND_MERGER_SCORE", "0") == "1":
+        cand_merger.calc_score()
+    else:
+        print("Skip cand_merger.calc_score(); final CV is computed by ranker_trainer.")
 
 
 if __name__ == "__main__":
