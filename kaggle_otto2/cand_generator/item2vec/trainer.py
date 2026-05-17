@@ -36,6 +36,8 @@ class Item2VecTrainer:
         self.gen_cand_topk = self.config.yaml.cg.item2vec.get("gen_cand_topk", 40)
 
     def fit(self, model_dir: Path, workers=4):
+        model_dir.mkdir(parents=True, exist_ok=True)
+
         with TimeUtil.timer("get aid_sentences"):
             aid_sentences = (
                 self.data_loader.get_train_df()
