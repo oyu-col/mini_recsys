@@ -33,7 +33,13 @@ def main(exp: str):
         LastInterCandGenerator(*[*common_params, "order"]),
         # ItemCF
         *[
-            ItemCFCandGenerator(*[*common_params, agg_method, *itemcf_param])
+            ItemCFCandGenerator(
+                config.dir_config.exp_output_dir,
+                data_loader,
+                config,
+                agg_method,
+                *itemcf_param,
+            )
             for itemcf_param in itemcf_params
             for agg_method in ITEMCF_AGG_METHODS
         ],
