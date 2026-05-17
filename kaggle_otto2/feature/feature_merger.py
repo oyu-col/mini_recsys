@@ -40,6 +40,7 @@ class FeatureMerger(CandGeneratorBase):
                             ),
                             on=feature.key_cols,
                             how="outer",
+                            coalesce=True,
                         )
 
             with TimeUtil.timer("load cand_merger cand_df"):
