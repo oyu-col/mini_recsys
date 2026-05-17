@@ -21,6 +21,14 @@ def main(exp: str, model_type: str):
         config.dir_config.exp_output_dir, data_loader, config
     )
     neg_sampler = NegSampler(config.dir_config.exp_output_dir, data_loader, config)
+    if not (neg_sampler.data_dir / "cand_df.parquet").exists():
+        if not (feature_merger.data_dir / "cand_df.parquet").exists():
+            raise FileNotFoundError(
+                "feature_merger/cand_df.parquet is missing. "
+                "Run kaggle_otto2/feature/main.py before training the ranker."
+            )
+        print("neg_sampler/cand_df.parquet is missing; running negative sampling now.")
+        neg_sampler.neg_sampling(feature_merger)
 
     trainer = RankerTrainer(
         config.dir_config.exp_output_dir,
