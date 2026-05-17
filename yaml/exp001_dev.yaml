@@ -4,6 +4,7 @@ pp:
   sampling_ratio: 0.05
 cg:
   cand_topk: 100
+  cand_merger_topk_cap: 20
   item_cf:
     param_preset: core3
     max_session_events: 30

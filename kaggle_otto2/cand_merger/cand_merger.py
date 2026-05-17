@@ -23,38 +23,53 @@ class CandMerger(CandGeneratorBase):
         self.config = config
 
     def merge(self, cand_generators: List[CandGeneratorBase]):
-        for cg in cand_generators:
-            print(cg.cg_name)
-            print(cg.scan().head().collect())
+        merge_topk_cap = int(
+            self.config.yaml.cg.get("cand_merger_topk_cap", 0) or 0
+        )
+
+        with TimeUtil.timer("load top-k candidate generator outputs"):
+            cg_dfs = {}
+            cand_parts = []
+            with tqdm(cand_generators, dynamic_ncols=True) as tepoch:
+                for cg in tepoch:
+                    score_col = f"{cg.cg_name}_score"
+                    rank_col = f"{score_col}_rank"
+                    min_rank_col = f"{score_col}_min_rank"
+                    topk = cg.gen_cand_topk
+                    if merge_topk_cap > 0:
+                        topk = min(topk, merge_topk_cap)
+
+                    cand_path = cg.data_dir / "cand_df.parquet"
+                    if not cand_path.exists():
+                        raise FileNotFoundError(
+                            f"Missing candidate file for {cg.cg_name}: {cand_path}"
+                        )
+
+                    cg_df = (
+                        pl.read_parquet(cand_path)
+                        .select(
+                            [
+                                pl.col("session").cast(pl.Int32),
+                                pl.col("aid").cast(pl.Int32),
+                                pl.col(score_col).cast(cg.dtype),
+                                pl.col(rank_col).cast(pl.Int16),
+                                pl.col(min_rank_col).cast(pl.Int16),
+                            ]
+                        )
+                        .filter(pl.col(rank_col) <= topk)
+                    )
+                    cg_dfs[cg.cg_name] = (cg, cg_df)
+                    cand_parts.append(cg_df.select(["session", "aid"]))
+                    _, m, p = GlobalUtil.get_metric()
+                    tepoch.set_postfix(
+                        channel=cg.cg_name,
+                        rows=cg_df.height,
+                        mem=f"{m:.1f}GB({p:.1f}%)",
+                    )
 
         with TimeUtil.timer("get session aid list"):
-            cg_chunks = np.array_split(cand_generators, 4)
-            cand_df = pl.DataFrame()
-            with tqdm(cg_chunks, dynamic_ncols=True) as tepoch:
-                for cg_chunk in tepoch:
-                    cand_df = pl.concat(
-                        [
-                            cand_df,
-                            pl.concat(
-                                [
-                                    cg.scan()
-                                    .groupby("session")
-                                    .head(cg.gen_cand_topk)
-                                    .select(
-                                        [
-                                            pl.col("session"),
-                                            pl.col("aid"),
-                                        ]
-                                    )
-                                    for cg in cg_chunk
-                                ]
-                            )
-                            .unique()
-                            .collect(),
-                        ]
-                    ).unique()
-                    _, m, p = GlobalUtil.get_metric()
-                    tepoch.set_postfix(mem=f"{m:.1f}GB({p:.1f}%)")
+            cand_df = pl.concat(cand_parts).unique()
+            print("candidate pool:", cand_df.shape)
 
         if self.config.is_cv:
             with TimeUtil.timer("add target cols"):
@@ -104,10 +119,9 @@ class CandMerger(CandGeneratorBase):
         with TimeUtil.timer("join selected"):
             with tqdm(cand_generators, dynamic_ncols=True) as tepoch:
                 for cg in tepoch:
+                    _, cg_df = cg_dfs[cg.cg_name]
                     cand_df = cand_df.join(
-                        cg.scan()
-                        .groupby("session")
-                        .head(cg.gen_cand_topk)
+                        cg_df
                         .select(
                             [
                                 pl.col("session"),
@@ -116,8 +130,7 @@ class CandMerger(CandGeneratorBase):
                                 .cast(pl.Int8)
                                 .alias(f"{cg.cg_name}_score_selected"),
                             ]
-                        )
-                        .collect(),
+                        ),
                         on=["session", "aid"],
                         how="left",
                     ).with_column(pl.col(f"{cg.cg_name}_score_selected").fill_null(0))
@@ -127,17 +140,9 @@ class CandMerger(CandGeneratorBase):
         with TimeUtil.timer("join scores"):
             with tqdm(cand_generators, dynamic_ncols=True) as tepoch:
                 for cg in tepoch:
-                    _cand_df = cg.scan().select(
-                        [
-                            pl.col("session"),
-                            pl.col("aid"),
-                            pl.col(f"{cg.cg_name}_score"),
-                            pl.col(f"{cg.cg_name}_score_rank"),
-                            pl.col(f"{cg.cg_name}_score_min_rank"),
-                        ]
-                    )
+                    _, _cand_df = cg_dfs[cg.cg_name]
                     cand_df = cand_df.join(
-                        _cand_df.collect(),
+                        _cand_df,
                         on=["session", "aid"],
                         how="left",
                     ).with_columns(
